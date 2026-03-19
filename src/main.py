@@ -26,6 +26,14 @@ RETRY_DELAY = 1
 REQUEST_TIMEOUT = 10.0
         
 
+async with AsyncClient(
+    timeout=REQUEST_TIMEOUT, 
+    follow_redirects=True,
+    limits=httpx.Limits(max_connections=10),  # 限制并发连接
+    verify=False  # 忽略 SSL 证书错误（可选，解决部分 CDN 证书问题）
+) as client:
+
+
 async def fetch_sub_plugins(url: str, client: AsyncClient) -> list:
     """从订阅源获取单个插件列表
 

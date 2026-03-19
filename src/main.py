@@ -3,7 +3,7 @@ import ujson as json
 from pathlib import Path
 from loguru import logger
 from httpx import AsyncClient
-import hashlib
+import hashlib  # 保留库但不使用，避免删库报错
 
 # ==================== 核心配置（修改这里的群晖地址） ====================
 CDN_URL = "http://7se.de5.net:8888/music/"  # 你的群晖地址，末尾必须带 /
@@ -61,7 +61,7 @@ async def fetch_sub_plugins(url, client):
         return []
 
 async def collect_plugins(origins, client):
-    """收集所有插件"""
+    """收集所有插件（保留原始文件名替换URL）"""
     all_plugins = []
     
     # 处理批量订阅源
@@ -83,27 +83,40 @@ async def collect_plugins(origins, client):
             unique_plugins.append(plugin)
     
     logger.info(f"去重后共 {len(unique_plugins)} 个插件")
+    
+    # ========== 核心修改：替换URL为CDN地址（保留原始文件名） ==========
+    if USE_CDN:
+        logger.info("开始替换所有插件URL为CDN地址（保留原始文件名）...")
+        for plugin in unique_plugins:
+            # 提取原始URL中的文件名（取消MD5，直接用原始名）
+            original_url = plugin["url"]
+            js_filename = original_url.split("/")[-1]  # 从URL末尾取原始文件名
+            # 替换URL为群晖地址 + 原始文件名
+            plugin["url"] = f"{CDN_URL}{js_filename}"
+    # ================================================================
+    
     return unique_plugins
 
 async def download_and_process_plugin(plugin, client):
-    """下载插件并处理（仅保存文件，URL已提前替换）"""
+    """下载插件并处理（保留原始文件名保存）"""
     try:
         original_url = plugin.get("original_url", plugin["url"])  # 保留原始URL用于下载
         # 下载插件内容
         response = await client.get(original_url, timeout=REQUEST_TIMEOUT)
-        # 新增：404直接跳过，不终止脚本
+        # 404容错：跳过失效插件
         if response.status_code == 404:
             logger.warning(f"插件 {plugin.get('name', '未知插件')} 地址404，跳过：{original_url}")
             return None
         response.raise_for_status()
         plugin_content = response.text.encode("utf-8")
         
-        # 生成MD5文件名（和URL替换时的MD5一致）
-        md5_hash = hashlib.md5(original_url.encode("utf-8")).hexdigest()
-        js_filename = f"{md5_hash}.js"
+        # ========== 核心修改：提取原始文件名（取消MD5） ==========
+        js_filename = original_url.split("/")[-1]  # 直接用原始文件名，不生成MD5
+        # ========================================================
+        
         js_path = DIST_DIR / js_filename
         
-        # 保存插件文件
+        # 保存插件文件（用原始文件名）
         with open(js_path, "wb") as f:
             f.write(plugin_content)
         

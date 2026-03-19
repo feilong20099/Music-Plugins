@@ -6,7 +6,8 @@ from httpx import AsyncClient
 import hashlib
 
 # CDN
-CDN_URL = "https://musicfreepluginshub.2020818.xyz/"
+# CDN_URL = "https://musicfreepluginshub.2020818.xyz/"
+CDN_URL = "http://7se.de5.net:8888/music/"
 USE_CDN = False
 VERSION = "0.2.0"
 
@@ -209,9 +210,9 @@ async def main():
     logger.info("开始执行插件更新任务...")
 
     # 清空 dist 目录中的 JS 文件
-    for js_file in DIST_DIR.glob("*.js"):
-        js_file.unlink()
-    logger.info("已清空 dist 目录中的 JS 文件")
+    # for js_file in DIST_DIR.glob("*.js"):
+    #    js_file.unlink()
+    # logger.info("已清空 dist 目录中的 JS 文件")
 
     # 1. 加载配置
     origins = await load_origins()
@@ -236,6 +237,14 @@ async def main():
 
         logger.info(f"成功验证 {len(valid_plugins)} 个插件")
 
+    # ========== 新增：删除失效的 JS 文件 ==========
+    new_js = set(f.name for f in DIST_DIR.glob("*.js"))
+    invalid_js = existing_js - new_js
+    for js_name in invalid_js:
+        (DIST_DIR / js_name).unlink()
+    logger.info(f"已删除 {len(invalid_js)} 个失效插件文件")
+
+        
     # 3. 保存结果
     if await save_results({"desc": VERSION, "plugins": valid_plugins}):
         logger.success(f"任务完成! 共更新 {len(valid_plugins)} 个插件")

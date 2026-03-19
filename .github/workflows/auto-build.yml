@@ -1,72 +1,80 @@
 name: 自动生成群晖地址的插件文件
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 手动触发
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * *'  # 每日UTC 2点（北京时间10点）
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  RETRY_COUNT: 3
-  RETRY_DELAY: 5
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 强制Node24，消除警告
   PYTHONIOENCODING: utf-8
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 明确赋予读写权限
+      contents: write  # 必须的读写权限
     steps:
-      - name: 拉取代码
+      # 1. 拉取代码
+      - name: 拉取仓库代码
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 配置 Python
+      # 2. 配置Python
+      - name: 配置Python环境
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: 安装依赖
+      # 3. 安装依赖（极简版，确保成功）
+      - name: 安装Python依赖
         run: |
           pip install --upgrade pip
-          pip install loguru==0.7.2 httpx==0.27.0 ujson==5.10.0
+          pip install loguru httpx ujson
+          # 验证依赖
           pip list | grep -E "loguru|httpx|ujson"
 
-      - name: 运行脚本生成插件文件（核心）
+      # 4. 运行脚本（核心：提前创建日志文件）
+      - name: 生成插件文件
         run: |
-          # 确保 dist 目录存在
+          # 提前创建日志文件，避免缺失
+          touch build.log
+          # 确保dist目录存在
           mkdir -p ./dist
-          # 运行脚本并输出详细日志
-          python src/main.py 2>&1 | tee build.log
-          # 验证文件是否生成
-          if [ ! -f "./dist/plugins.json" ]; then
-            echo "❌ 未生成 plugins.json，日志："
+          # 运行脚本并记录日志
+          python src/main.py 2>&1 | tee -a build.log
+          # 检查是否生成了plugins.json
+          if [ -f "./dist/plugins.json" ]; then
+            echo "✅ 插件文件生成成功！"
+            # 预览前10行确认内容
+            head -10 ./dist/plugins.json
+          else
+            echo "❌ 插件文件生成失败，日志内容："
             cat build.log
             exit 1
-          else
-            echo "✅ 生成成功，预览内容："
-            cat ./dist/plugins.json | head -20
           fi
 
-      - name: 推送生成的文件到 dist 分支
+      # 5. 推送文件到dist分支
+      - name: 推送文件到dist分支
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # 切换到 dist 分支（无则创建）
+          # 切换到dist分支（无则创建）
           git checkout --orphan dist
-          # 清空分支旧内容（保留 .git 目录）
+          # 清空旧内容
           rm -rf *
-          # 复制生成的文件到分支根目录
+          # 复制生成的文件
           cp -r ./dist/* .
-          # 提交并推送
+          # 提交并强制推送
           git add .
           git commit -m "Auto update plugins $(date +'%Y-%m-%d %H:%M:%S')"
           git push -f origin dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 上传日志（排查用）
+      # 6. 上传日志（无论成功失败）
+      - name: 上传构建日志
         uses: actions/upload-artifact@v4
         with:
           name: build-logs

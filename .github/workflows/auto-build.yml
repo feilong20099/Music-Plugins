@@ -18,7 +18,7 @@ jobs:
     steps:
       # 1. 拉取仓库代码（升级到最新版，原生支持 Node24）
       - name: 拉取代码
-        uses: actions/checkout@v4.4.0
+        uses: actions/checkout@v4.3.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -33,7 +33,7 @@ jobs:
 
       # 3. 配置 Python（移除缓存，解决 400 错误）
       - name: 配置 Python
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v5.2.0
         with:
           python-version: '3.10'
           # 禁用自动缓存，解决 Cache 400 错误
@@ -95,7 +95,7 @@ jobs:
 
       # 7. 上传构建日志（无论成功失败都上传）
       - name: 上传构建日志
-        uses: actions/upload-artifact@v4.4.0
+        uses: actions/upload-artifact@v4.3.0
         with:
           name: build-logs
           path: build.log

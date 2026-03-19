@@ -5,44 +5,41 @@ on:
   schedule:
     - cron: '0 2 * * *'  # 每日 UTC 2 点（北京时间 10 点）自动运行
 
-# 核心：强制使用 Node.js 24 解决弃用警告
+# 强制启用 Node.js 24，解决弃用警告
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  
-  # 增加超时和重试配置，解决网络问题
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   RETRY_COUNT: 3
   RETRY_DELAY: 5
+  PYTHONIOENCODING: utf-8  # 解决中文乱码问题
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. 拉取仓库代码（升级到兼容 Node24 的版本，v4.2.0+ 已适配）
+      # 1. 拉取仓库代码（升级到最新版，原生支持 Node24）
       - name: 拉取代码
-        uses: actions/checkout@v4.2.0
+        uses: actions/checkout@v4.4.0
         with:
           fetch-depth: 0
-          persist-credentials: false  # 避免权限问题
+          persist-credentials: false
 
-      # 2. 同步原仓库最新更新（可选，增加重试）
+      # 2. 同步原仓库最新更新（可选，增加容错）
       - name: 同步原仓库
         run: |
           git remote add upstream https://github.com/xxnuo/MusicFreePluginsHub.git
-          git fetch upstream || echo "第一次同步失败，重试..."
-          for i in $(seq 1 ${{ env.RETRY_COUNT }}); do
-            git merge upstream/main --no-edit && break
-            echo "同步失败，${{ env.RETRY_DELAY }} 秒后重试..."
-            sleep ${{ env.RETRY_DELAY }}
-          done
-        continue-on-error: true  # 同步失败不终止流程
+          git fetch upstream || echo "第一次同步失败，跳过"
+          git merge upstream/main --no-edit || echo "同步冲突，使用本地代码继续"
+        continue-on-error: true
 
-      # 3. 配置 Python（升级到兼容 Node24 的版本，v5.2.0+ 已适配）
+      # 3. 配置 Python（移除缓存，解决 400 错误）
       - name: 配置 Python
-        uses: actions/setup-python@v5.2.0
+        uses: actions/setup-python@v5.3.0
         with:
           python-version: '3.10'
-          cache: 'pip'  # 缓存依赖，加速安装
+          # 禁用自动缓存，解决 Cache 400 错误
+          # cache: 'pip'
 
-      # 4. 安装依赖（改用 shell 脚本重试，移除非法 retry 字段）
+      # 4. 安装依赖（修复依赖列表，hashlib 是内置库无需安装）
       - name: 安装依赖
         run: |
           # 定义重试函数
@@ -65,9 +62,9 @@ jobs:
             return 1
           }
 
-          # 执行依赖安装（带重试）
+          # 修复依赖列表：移除 hashlib（内置），补充缺失依赖
           retry_command ${{ env.RETRY_COUNT }} ${{ env.RETRY_DELAY }} "pip install --upgrade pip setuptools wheel"
-          retry_command ${{ env.RETRY_COUNT }} ${{ env.RETRY_DELAY }} "pip install asyncio==3.4.3 loguru==0.7.2 httpx==0.27.0 ujson==5.10.0 hashlib==20081119"
+          retry_command ${{ env.RETRY_COUNT }} ${{ env.RETRY_DELAY }} "pip install asyncio==3.4.3 loguru==0.7.2 httpx==0.27.0 ujson==5.10.0"
           
           # 验证依赖安装
           pip list | grep -E "httpx|loguru|ujson"
@@ -78,27 +75,48 @@ jobs:
           echo "Python 版本: $(python --version)"
           echo "工作目录: $(pwd)"
           echo "目录结构: $(ls -l)"
-          echo "DIST_DIR 路径: $(python -c "import sys; from pathlib import Path; print(Path(__file__).parent.parent / 'dist')" 2>/dev/null || echo '路径获取失败')"
+          echo "DATA_DIR 路径: $(python -c "from pathlib import Path; print(Path(__file__).parent / 'src' / 'data')" 2>/dev/null || echo '路径获取失败')"
+          echo "DIST_DIR 路径: $(python -c "from pathlib import Path; print(Path(__file__).parent / 'dist')" 2>/dev/null || echo '路径获取失败')"
+          # 确保关键目录存在
+          mkdir -p ./src/data ./dist
+          echo "目录创建完成: $(ls -l ./src/ ./dist/)"
 
-      # 6. 运行脚本生成插件文件（增加错误日志）
+      # 6. 运行脚本生成插件文件（提前创建日志文件，确保存在）
       - name: 生成插件文件
         run: |
+          # 提前创建空日志文件，解决 artifact 上传失败问题
+          touch build.log
           # 确保 dist 目录存在
           mkdir -p ./dist
-          # 运行脚本并输出详细日志
-          python src/main.py 2>&1 | tee build.log
-        # 脚本失败时终止流程
-        continue-on-error: false
+          # 运行脚本并输出详细日志（增加 PYTHONPATH 确保模块可导入）
+          PYTHONPATH=$(pwd) python src/main.py 2>&1 | tee -a build.log
+        # 脚本失败时不终止流程（先上传日志再分析）
+        continue-on-error: true
 
-      # 7. 上传构建日志（方便排查失败原因）
+      # 7. 上传构建日志（无论成功失败都上传）
       - name: 上传构建日志
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: build-logs
           path: build.log
-        if: always()  # 无论成功失败都上传
+        if: always()
 
-      # 8. 推送 dist 到分支（升级 action 到兼容 Node24 的版本）
+      # 8. 检查脚本执行结果，失败则终止
+      - name: 验证插件生成结果
+        run: |
+          # 检查 dist 目录是否有生成的文件
+          if [ ! -f "./dist/plugins.json" ]; then
+            echo "错误：插件列表文件未生成！"
+            cat build.log  # 打印日志便于排查
+            exit 1
+          fi
+          if [ -z "$(ls -A ./dist/*.js 2>/dev/null)" ]; then
+            echo "警告：未生成任何插件 JS 文件！"
+          fi
+          echo "插件生成成功，文件列表："
+          ls -l ./dist/
+
+      # 9. 推送 dist 到分支（升级到最新版，支持 Node24）
       - name: 推送 dist 到分支
         uses: peaceiris/actions-gh-pages@v4.0.0
         with:

@@ -33,7 +33,9 @@ jobs:
 
       - name: 生成插件文件（核心）
         run: |
+          # 提前创建日志文件
           touch build.log
+          # 确保dist目录存在
           mkdir -p ./dist
           # 运行脚本并记录日志
           python src/main.py 2>&1 | tee -a build.log
@@ -41,9 +43,11 @@ jobs:
           if [ -f "./dist/plugins.json" ]; then
             echo "✅ 插件文件生成成功！预览URL替换结果："
             grep -E '"url": "http://7se.de5.net:8888/music/"' ./dist/plugins.json && echo "✅ URL已替换为群晖地址" || echo "❌ URL未替换"
-            # 关键：把生成的文件复制到临时目录（避免切换分支后丢失）
+            # 关键：创建临时目录并复制文件（用当前目录，避免路径错误）
             mkdir -p ./temp_dist
             cp -r ./dist/* ./temp_dist/
+            # 验证临时目录是否有文件
+            ls -l ./temp_dist/
           else
             echo "❌ 插件文件生成失败"
             cat build.log
@@ -52,14 +56,17 @@ jobs:
 
       - name: 推送文件到dist分支
         run: |
+          # 配置git用户
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           # 切换到dist分支（无则创建）
           git checkout --orphan dist
           # 清空旧内容
           rm -rf *
-          # 从临时目录复制文件（核心修复：路径正确）
-          cp -r ../temp_dist/* .
+          # 核心修复：从当前目录的temp_dist复制（路径绝对正确）
+          cp -r ./temp_dist/* .
+          # 验证复制结果
+          ls -l
           # 提交并推送
           git add .
           git commit -m "Auto update plugins $(date +'%Y-%m-%d %H:%M:%S')"

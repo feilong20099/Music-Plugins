@@ -86,26 +86,26 @@ async def collect_plugins(origins, client):
     return unique_plugins
 
 async def download_and_process_plugin(plugin, client):
-    """下载插件并处理（生成MD5文件名+替换URL）"""
+    """下载插件并处理（仅保存文件，URL已提前替换）"""
     try:
-        plugin_url = plugin["url"]
+        original_url = plugin.get("original_url", plugin["url"])  # 保留原始URL用于下载
         # 下载插件内容
-        response = await client.get(plugin_url, timeout=REQUEST_TIMEOUT)
+        response = await client.get(original_url, timeout=REQUEST_TIMEOUT)
+        # 新增：404直接跳过，不终止脚本
+        if response.status_code == 404:
+            logger.warning(f"插件 {plugin.get('name', '未知插件')} 地址404，跳过：{original_url}")
+            return None
         response.raise_for_status()
         plugin_content = response.text.encode("utf-8")
         
-        # 生成MD5文件名
-        md5_hash = hashlib.md5(plugin_content).hexdigest()
+        # 生成MD5文件名（和URL替换时的MD5一致）
+        md5_hash = hashlib.md5(original_url.encode("utf-8")).hexdigest()
         js_filename = f"{md5_hash}.js"
         js_path = DIST_DIR / js_filename
         
         # 保存插件文件
         with open(js_path, "wb") as f:
             f.write(plugin_content)
-        
-        # 替换URL为CDN地址
-        if USE_CDN:
-            plugin["url"] = f"{CDN_URL}{js_filename}"
         
         logger.info(f"处理成功：{plugin.get('name', '未知插件')} -> {js_filename}")
         return plugin

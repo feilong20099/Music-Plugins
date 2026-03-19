@@ -5,6 +5,12 @@ from loguru import logger
 from httpx import AsyncClient
 import hashlib
 
+
+logger.info(f"DATA_DIR 路径: {DATA_DIR.absolute()}")
+logger.info(f"DATA_JSON_PATH 存在: {DATA_JSON_PATH.exists()}")
+logger.info(f"DIST_DIR 路径: {DIST_DIR.absolute()}")
+
+
 # CDN
 # CDN_URL = "https://musicfreepluginshub.2020818.xyz/"
 CDN_URL = "http://7se.de5.net:8888/music/"

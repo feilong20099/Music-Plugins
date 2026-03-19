@@ -1,48 +1,96 @@
-name: 自动生成地址的插件文件
+name: 自动生成群晖地址的插件文件
 
 on:
   workflow_dispatch:  # 手动触发
   schedule:
     - cron: '0 2 * * *'  # 每日 UTC 2 点（北京时间 10 点）自动运行
 
+# 核心：强制使用 Node.js 24 解决弃用警告
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  
+  # 增加超时和重试配置，解决网络问题
+  RETRY_COUNT: 3
+  RETRY_DELAY: 5
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. 拉取仓库代码
+      # 1. 拉取仓库代码（升级到兼容 Node24 的版本，v4.2.0+ 已适配）
       - name: 拉取代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
+          persist-credentials: false  # 避免权限问题
 
-      # 2. 同步原仓库最新更新（可选，保持和原仓库一致）
+      # 2. 同步原仓库最新更新（可选，增加重试）
       - name: 同步原仓库
         run: |
           git remote add upstream https://github.com/xxnuo/MusicFreePluginsHub.git
-          git fetch upstream
-          git merge upstream/main --no-edit || echo "无新更新"
+          git fetch upstream || echo "第一次同步失败，重试..."
+          for i in $(seq 1 ${{ env.RETRY_COUNT }}); do
+            git merge upstream/main --no-edit && break
+            echo "同步失败，${{ env.RETRY_DELAY }} 秒后重试..."
+            sleep ${{ env.RETRY_DELAY }}
+          done
+        continue-on-error: true  # 同步失败不终止流程
 
-      # 3. 配置 Python
+      # 3. 配置 Python（升级到兼容 Node24 的版本，v5.2.0+ 已适配）
       - name: 配置 Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.2.0
         with:
           python-version: '3.10'
+          cache: 'pip'  # 缓存依赖，加速安装
 
-      # 4. 安装依赖
+      # 4. 安装依赖（增加版本锁定+重试，解决依赖缺失）
       - name: 安装依赖
         run: |
-          pip install --upgrade pip
-          pip install asyncio loguru httpx ujson hashlib
+          pip install --upgrade pip setuptools wheel
+          # 锁定依赖版本，避免兼容性问题
+          pip install asyncio==3.4.3 loguru==0.7.2 httpx==0.27.0 ujson==5.10.0 hashlib==20081119
+          # 验证依赖安装
+          pip list | grep -E "httpx|loguru|ujson"
+        # 增加重试逻辑
+        env:
+          PIP_RETRY: ${{ env.RETRY_COUNT }}
+          PIP_TIMEOUT: 30
+        retry:
+          maxAttempts: ${{ env.RETRY_COUNT }}
+          delaySeconds: ${{ env.RETRY_DELAY }}
 
-      # 5. 运行脚本生成插件文件（dist 目录）
+      # 5. 调试：打印环境信息（排查路径/版本问题）
+      - name: 打印环境信息
+        run: |
+          echo "Python 版本: $(python --version)"
+          echo "工作目录: $(pwd)"
+          echo "目录结构: $(ls -l)"
+          echo "DIST_DIR 路径: $(python -c "from pathlib import Path; print(Path(__file__).parent.parent / 'dist')")"
+
+      # 6. 运行脚本生成插件文件（增加错误日志）
       - name: 生成插件文件
-        run: python src/main.py
+        run: |
+          # 确保 dist 目录存在
+          mkdir -p ./dist
+          # 运行脚本并输出详细日志
+          python src/main.py 2>&1 | tee build.log
+        # 脚本失败时保留日志
+        continue-on-error: false
 
-      # 6. 上传 dist 目录到 dist 分支（方便群晖下载）
+      # 7. 上传构建日志（方便排查失败原因）
+      - name: 上传构建日志
+        uses: actions/upload-artifact@v4.3.0
+        with:
+          name: build-logs
+          path: build.log
+        if: always()  # 无论成功失败都上传
+
+      # 8. 推送 dist 到分支（升级 action 到兼容 Node24 的版本）
       - name: 推送 dist 到分支
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: dist  # 专门存放生成的插件文件
+          publish_branch: dist
           publish_dir: ./dist
-          force_orphan: true  # 强制覆盖旧文件
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'

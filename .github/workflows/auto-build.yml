@@ -42,21 +42,35 @@ jobs:
           python-version: '3.10'
           cache: 'pip'  # 缓存依赖，加速安装
 
-      # 4. 安装依赖（增加版本锁定+重试，解决依赖缺失）
+      # 4. 安装依赖（改用 shell 脚本重试，移除非法 retry 字段）
       - name: 安装依赖
         run: |
-          pip install --upgrade pip setuptools wheel
-          # 锁定依赖版本，避免兼容性问题
-          pip install asyncio==3.4.3 loguru==0.7.2 httpx==0.27.0 ujson==5.10.0 hashlib==20081119
+          # 定义重试函数
+          retry_command() {
+            local retries=$1
+            local delay=$2
+            shift 2
+            local cmd="$@"
+            
+            for ((i=1; i<=retries; i++)); do
+              echo "执行命令（第 $i 次尝试）: $cmd"
+              if eval "$cmd"; then
+                echo "命令执行成功！"
+                return 0
+              fi
+              echo "命令执行失败，$delay 秒后重试..."
+              sleep $delay
+            done
+            echo "重试 $retries 次后仍失败，终止！"
+            return 1
+          }
+
+          # 执行依赖安装（带重试）
+          retry_command ${{ env.RETRY_COUNT }} ${{ env.RETRY_DELAY }} "pip install --upgrade pip setuptools wheel"
+          retry_command ${{ env.RETRY_COUNT }} ${{ env.RETRY_DELAY }} "pip install asyncio==3.4.3 loguru==0.7.2 httpx==0.27.0 ujson==5.10.0 hashlib==20081119"
+          
           # 验证依赖安装
           pip list | grep -E "httpx|loguru|ujson"
-        # 增加重试逻辑
-        env:
-          PIP_RETRY: ${{ env.RETRY_COUNT }}
-          PIP_TIMEOUT: 30
-        retry:
-          maxAttempts: ${{ env.RETRY_COUNT }}
-          delaySeconds: ${{ env.RETRY_DELAY }}
 
       # 5. 调试：打印环境信息（排查路径/版本问题）
       - name: 打印环境信息
@@ -64,7 +78,7 @@ jobs:
           echo "Python 版本: $(python --version)"
           echo "工作目录: $(pwd)"
           echo "目录结构: $(ls -l)"
-          echo "DIST_DIR 路径: $(python -c "from pathlib import Path; print(Path(__file__).parent.parent / 'dist')")"
+          echo "DIST_DIR 路径: $(python -c "import sys; from pathlib import Path; print(Path(__file__).parent.parent / 'dist')" 2>/dev/null || echo '路径获取失败')"
 
       # 6. 运行脚本生成插件文件（增加错误日志）
       - name: 生成插件文件
@@ -73,7 +87,7 @@ jobs:
           mkdir -p ./dist
           # 运行脚本并输出详细日志
           python src/main.py 2>&1 | tee build.log
-        # 脚本失败时保留日志
+        # 脚本失败时终止流程
         continue-on-error: false
 
       # 7. 上传构建日志（方便排查失败原因）

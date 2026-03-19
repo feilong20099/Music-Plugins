@@ -3,15 +3,15 @@ import ujson as json
 from pathlib import Path
 from loguru import logger
 from httpx import AsyncClient
-import hashlib  # 保留库但不使用，避免删库报错
+import hashlib  # 恢复MD5使用
 
-# ==================== 核心配置（修改这里的群晖地址） ====================
-CDN_URL = "http://7se.de5.net:8888/music/"  # 你的群晖地址，末尾必须带 /
-USE_CDN = True  # 必须设为 True
+# ==================== 核心配置（你的群晖地址） ====================
+CDN_URL = "http://7se.de5.net:8888/music/"  # 末尾必须带 /
+USE_CDN = True
 VERSION = "0.2.0"
-# =====================================================================
+# =================================================================
 
-# 定义路径常量
+# 路径常量
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 DATA_JSON_PATH = DATA_DIR / "origins.json"
@@ -20,12 +20,12 @@ DIST_DIR = Path(__file__).parent.parent / "dist"
 DIST_DIR.mkdir(exist_ok=True)
 DIST_JSON_PATH = DIST_DIR / "plugins.json"
 
-# 重试相关常量
+# 重试配置
 MAX_RETRIES = 3
 RETRY_DELAY = 1
 REQUEST_TIMEOUT = 10.0
 
-# 初始化日志
+# 日志配置
 logger.add("plugin_update.log", rotation="1 day", retention="3 days", level="INFO")
 
 async def load_origins():
@@ -61,7 +61,7 @@ async def fetch_sub_plugins(url, client):
         return []
 
 async def collect_plugins(origins, client):
-    """收集所有插件（保留原始文件名替换URL）"""
+    """收集所有插件（恢复MD5命名）"""
     all_plugins = []
     
     # 处理批量订阅源
@@ -84,39 +84,40 @@ async def collect_plugins(origins, client):
     
     logger.info(f"去重后共 {len(unique_plugins)} 个插件")
     
-    # ========== 核心修改：替换URL为CDN地址（保留原始文件名） ==========
+    # ========== 还原：MD5生成文件名 + 替换URL ==========
     if USE_CDN:
-        logger.info("开始替换所有插件URL为CDN地址（保留原始文件名）...")
+        logger.info("开始替换所有插件URL为CDN地址（MD5命名）...")
         for plugin in unique_plugins:
-            # 提取原始URL中的文件名（取消MD5，直接用原始名）
-            original_url = plugin["url"]
-            js_filename = original_url.split("/")[-1]  # 从URL末尾取原始文件名
-            # 替换URL为群晖地址 + 原始文件名
+            # 恢复MD5哈希生成文件名
+            md5_hash = hashlib.md5(plugin["url"].encode("utf-8")).hexdigest()
+            js_filename = f"{md5_hash}.js"
+            # 替换URL为群晖地址 + MD5文件名
             plugin["url"] = f"{CDN_URL}{js_filename}"
-    # ================================================================
+    # ==================================================
     
     return unique_plugins
 
 async def download_and_process_plugin(plugin, client):
-    """下载插件并处理（保留原始文件名保存）"""
+    """下载插件并处理（恢复MD5命名保存）"""
     try:
         original_url = plugin.get("original_url", plugin["url"])  # 保留原始URL用于下载
         # 下载插件内容
         response = await client.get(original_url, timeout=REQUEST_TIMEOUT)
-        # 404容错：跳过失效插件
+        # 保留404容错
         if response.status_code == 404:
             logger.warning(f"插件 {plugin.get('name', '未知插件')} 地址404，跳过：{original_url}")
             return None
         response.raise_for_status()
         plugin_content = response.text.encode("utf-8")
         
-        # ========== 核心修改：提取原始文件名（取消MD5） ==========
-        js_filename = original_url.split("/")[-1]  # 直接用原始文件名，不生成MD5
-        # ========================================================
+        # ========== 还原：MD5生成文件名 ==========
+        md5_hash = hashlib.md5(original_url.encode("utf-8")).hexdigest()
+        js_filename = f"{md5_hash}.js"
+        # =========================================
         
         js_path = DIST_DIR / js_filename
         
-        # 保存插件文件（用原始文件名）
+        # 保存插件文件（MD5命名）
         with open(js_path, "wb") as f:
             f.write(plugin_content)
         
@@ -133,7 +134,6 @@ async def fetch_plugins(all_plugins, client):
         tasks.append(download_and_process_plugin(plugin, client))
     
     results = await asyncio.gather(*tasks)
-    # 过滤掉失败的插件
     valid_plugins = [p for p in results if p is not None]
     return valid_plugins
 
@@ -152,7 +152,7 @@ async def save_results(data):
 async def main():
     """主函数"""
     logger.info("===== 开始执行插件更新任务 =====")
-    # 打印路径信息（排查用）
+    # 打印路径信息
     logger.info(f"DATA_DIR 路径: {DATA_DIR.absolute()}")
     logger.info(f"DATA_JSON_PATH 存在: {DATA_JSON_PATH.exists()}")
     logger.info(f"DIST_DIR 路径: {DIST_DIR.absolute()}")
@@ -182,5 +182,4 @@ async def main():
     logger.info("===== 插件更新任务结束 =====")
 
 if __name__ == "__main__":
-    # 运行主函数
     asyncio.run(main())

@@ -31,7 +31,7 @@ jobs:
           pip install loguru httpx ujson
           pip list | grep -E "loguru|httpx|ujson"
 
-      - name: 生成插件文件（核心）
+      - name: 生成插件文件（核心：保留原始文件名）
         run: |
           # 提前创建日志文件
           touch build.log
@@ -41,12 +41,13 @@ jobs:
           python src/main.py 2>&1 | tee -a build.log
           # 验证文件生成
           if [ -f "./dist/plugins.json" ]; then
-            echo "✅ 插件文件生成成功！预览URL替换结果："
-            grep -E '"url": "http://7se.de5.net:8888/music/"' ./dist/plugins.json && echo "✅ URL已替换为群晖地址" || echo "❌ URL未替换"
-            # 关键：创建临时目录并复制文件（用当前目录，避免路径错误）
+            echo "✅ 插件文件生成成功！预览URL（保留原始文件名）："
+            grep -E '"url": "http://7se.de5.net:8888/music/"' ./dist/plugins.json | head -5
+            # 复制到临时目录（避免分支切换丢失）
             mkdir -p ./temp_dist
             cp -r ./dist/* ./temp_dist/
-            # 验证临时目录是否有文件
+            # 验证临时目录文件
+            echo "✅ 临时目录文件列表："
             ls -l ./temp_dist/
           else
             echo "❌ 插件文件生成失败"
@@ -63,13 +64,14 @@ jobs:
           git checkout --orphan dist
           # 清空旧内容
           rm -rf *
-          # 核心修复：从当前目录的temp_dist复制（路径绝对正确）
+          # 从临时目录复制文件（路径绝对正确）
           cp -r ./temp_dist/* .
           # 验证复制结果
+          echo "✅ dist分支文件列表："
           ls -l
           # 提交并推送
           git add .
-          git commit -m "Auto update plugins $(date +'%Y-%m-%d %H:%M:%S')"
+          git commit -m "Auto update plugins (保留原始文件名) $(date +'%Y-%m-%d %H:%M:%S')"
           git push -f origin dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

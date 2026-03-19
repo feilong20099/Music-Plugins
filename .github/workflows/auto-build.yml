@@ -1,0 +1,48 @@
+name: 自动生成地址的插件文件
+
+on:
+  workflow_dispatch:  # 手动触发
+  schedule:
+    - cron: '0 2 * * *'  # 每日 UTC 2 点（北京时间 10 点）自动运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 拉取仓库代码
+      - name: 拉取代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 同步原仓库最新更新（可选，保持和原仓库一致）
+      - name: 同步原仓库
+        run: |
+          git remote add upstream https://github.com/xxnuo/MusicFreePluginsHub.git
+          git fetch upstream
+          git merge upstream/main --no-edit || echo "无新更新"
+
+      # 3. 配置 Python
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 4. 安装依赖
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install asyncio loguru httpx ujson hashlib
+
+      # 5. 运行脚本生成插件文件（dist 目录）
+      - name: 生成插件文件
+        run: python src/main.py
+
+      # 6. 上传 dist 目录到 dist 分支（方便群晖下载）
+      - name: 推送 dist 到分支
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: dist  # 专门存放生成的插件文件
+          publish_dir: ./dist
+          force_orphan: true  # 强制覆盖旧文件

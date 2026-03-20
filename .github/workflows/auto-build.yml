@@ -1,0 +1,90 @@
+name: 自动生成群晖地址的插件文件
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 拉取main分支代码
+        uses: actions/checkout@v4
+        with:
+          ref: main  # 只拉取main分支
+          fetch-depth: 0
+
+      - name: 配置Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install loguru httpx ujson
+          pip list | grep -E "loguru|httpx|ujson"
+
+      - name: 生成插件文件（核心：生成带群晖地址的文件）
+        run: |
+          # 清空旧的dist目录（避免残留）
+          rm -rf ./dist && mkdir -p ./dist
+          touch build.log
+          # 运行脚本生成带群晖地址的插件文件
+          python src/main.py 2>&1 | tee -a build.log
+          # 验证生成结果
+          echo "✅ 生成的plugins.json内容预览："
+          cat ./dist/plugins.json | head -20
+          echo "✅ 生成的JS文件列表："
+          ls -l ./dist/
+
+      - name: 推送生成的文件到dist分支（直接推送runner中的新文件）
+        run: |
+          # 配置git用户
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 切换到dist分支（无则创建空分支）
+          if git rev-parse --verify dist >/dev/null 2>&1; then
+            git checkout dist
+          else
+            git checkout --orphan dist
+            git rm -rf .  # 清空初始内容
+          fi
+          
+          # 清空dist分支旧内容
+          rm -rf *
+          # 复制runner中生成的新文件到dist分支根目录
+          cp -r ./dist/* .
+          # 删除多余目录
+          rm -rf ./dist
+          
+          # 验证最终文件
+          echo "✅ 准备推送的文件列表："
+          ls -l
+          echo "✅ 最终plugins.json内容预览："
+          cat plugins.json | head -20
+          
+          # 提交并推送（强制覆盖）
+          git add .
+          git commit -m "Auto update plugins with 7se.de5.net address $(date +'%Y-%m-%d %H:%M:%S')"
+          git push -f origin dist
+          
+          # 切回main分支
+          git checkout main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 上传日志
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build.log
+        if: always()

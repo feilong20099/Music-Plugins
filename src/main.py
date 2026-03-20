@@ -23,23 +23,32 @@ DIST_JSON_PATH = DIST_DIR / "plugins.json"
 # 重试配置
 MAX_RETRIES = 3
 RETRY_DELAY = 1
-REQUEST_TIMEOUT = 15.0  # 延长超时时间
+REQUEST_TIMEOUT = 15.0
 
 # 日志配置
 logger.add("plugin_update.log", rotation="1 day", retention="3 days", level="INFO")
 
 async def load_origins():
-    """加载插件源配置"""
+    """加载插件源配置（增加JSON解析容错）"""
     try:
         if not DATA_JSON_PATH.exists():
             logger.error(f"配置文件不存在：{DATA_JSON_PATH.absolute()}")
             return None
         
+        # 读取文件内容并打印（排查用）
         with open(DATA_JSON_PATH, "r", encoding="utf-8") as f:
-            origins = json.load(f)
+            raw_content = f.read().strip()
+        logger.info(f"读取到origins.json内容（前200字符）：{raw_content[:200]}")
+        
+        # 解析JSON
+        origins = json.loads(raw_content)
         total = len(origins.get("sources", [])) + len(origins.get("singles", []))
         logger.info(f"成功加载 {total} 个插件源")
         return origins
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON解析失败！origins.json不是合法JSON格式：{str(e)}")
+        logger.error("请检查origins.json内容，必须是标准JSON格式，不能是文本/Markdown")
+        return None
     except Exception as e:
         logger.error(f"加载配置文件失败：{str(e)}")
         return None
@@ -152,7 +161,8 @@ async def save_results(valid_plugins):
         # 打印预览
         with open(DIST_JSON_PATH, "r", encoding="utf-8") as f:
             preview = json.load(f)
-            logger.info(f"插件列表预览：{preview['plugins'][:2]}")
+            if preview["plugins"]:
+                logger.info(f"插件列表预览：{preview['plugins'][:2]}")
         return True
     except Exception as e:
         logger.error(f"保存插件列表失败：{str(e)}")
@@ -169,7 +179,10 @@ async def main():
     # 1. 加载配置
     origins = await load_origins()
     if not origins:
-        logger.error("未加载到任何插件源配置")
+        logger.error("未加载到任何插件源配置，任务终止")
+        # 生成空的plugins.json避免Workflow报错
+        with open(DIST_JSON_PATH, "w", encoding="utf-8") as f:
+            json.dump({"desc": VERSION, "plugins": []}, f, ensure_ascii=False, indent=2)
         return
     
     # 2. 收集插件（替换URL）
@@ -177,6 +190,9 @@ async def main():
         all_plugins = await collect_plugins(origins, client)
         if not all_plugins:
             logger.warning("未收集到任何插件")
+            # 生成空的plugins.json
+            with open(DIST_JSON_PATH, "w", encoding="utf-8") as f:
+                json.dump({"desc": VERSION, "plugins": []}, f, ensure_ascii=False, indent=2)
             return
         
         # 3. 下载插件
@@ -187,7 +203,7 @@ async def main():
         await save_results(valid_plugins)
     else:
         logger.error("没有有效插件可保存")
-        # 即使无有效插件，也生成空的plugins.json避免Workflow报错
+        # 生成空的plugins.json
         with open(DIST_JSON_PATH, "w", encoding="utf-8") as f:
             json.dump({"desc": VERSION, "plugins": []}, f, ensure_ascii=False, indent=2)
     

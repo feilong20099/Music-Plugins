@@ -15,10 +15,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: 拉取代码
+      - name: 拉取代码（包含所有分支）
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 拉取所有历史和分支
 
       - name: 配置Python
         uses: actions/setup-python@v5
@@ -31,7 +31,7 @@ jobs:
           pip install loguru httpx ujson
           pip list | grep -E "loguru|httpx|ujson"
 
-      - name: 生成插件文件（核心：保留原始文件名）
+      - name: 生成插件文件（核心：在main分支完成所有生成）
         run: |
           # 提前创建日志文件
           touch build.log
@@ -41,38 +41,48 @@ jobs:
           python src/main.py 2>&1 | tee -a build.log
           # 验证文件生成
           if [ -f "./dist/plugins.json" ]; then
-            echo "✅ 插件文件生成成功！预览URL（保留原始文件名）："
+            echo "✅ 插件文件生成成功！预览URL："
             grep -E '"url": "http://7se.de5.net:8888/music/"' ./dist/plugins.json | head -5
-            # 复制到临时目录（避免分支切换丢失）
-            mkdir -p ./temp_dist
-            cp -r ./dist/* ./temp_dist/
-            # 验证临时目录文件
-            echo "✅ 临时目录文件列表："
-            ls -l ./temp_dist/
+            # 列出生成的文件（排查用）
+            echo "✅ 生成的文件列表："
+            ls -l ./dist/
           else
             echo "❌ 插件文件生成失败"
             cat build.log
             exit 1
           fi
 
-      - name: 推送文件到dist分支
+      - name: 推送文件到dist分支（终极修复：直接操作dist分支）
         run: |
           # 配置git用户
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # 切换到dist分支（无则创建）
-          git checkout --orphan dist
-          # 清空旧内容
-          rm -rf *
-          # 从临时目录复制文件（路径绝对正确）
-          cp -r ./temp_dist/* .
+          
+          # 检查dist分支是否存在，不存在则创建空分支
+          if git show-ref --verify --quiet refs/heads/dist; then
+            git checkout dist
+          else
+            git checkout --orphan dist
+            git rm -rf .  # 清空空分支的初始内容
+          fi
+          
+          # 从main分支的dist目录复制所有文件到当前dist分支
+          git checkout main -- ./dist/*
+          # 移动文件到根目录（符合你的需求）
+          mv ./dist/* .
+          rm -rf ./dist  # 删除多余目录
+          
           # 验证复制结果
-          echo "✅ dist分支文件列表："
+          echo "✅ dist分支根目录文件列表："
           ls -l
-          # 提交并推送
+          
+          # 提交并强制推送（覆盖旧内容）
           git add .
-          git commit -m "Auto update plugins (保留原始文件名) $(date +'%Y-%m-%d %H:%M:%S')"
+          git commit -m "Auto update plugins $(date +'%Y-%m-%d %H:%M:%S')"
           git push -f origin dist
+          
+          # 切回main分支（避免后续操作异常）
+          git checkout main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

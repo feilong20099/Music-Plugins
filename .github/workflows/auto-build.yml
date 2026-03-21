@@ -1,90 +1,102 @@
-name: 自动生成群晖地址的插件文件
+name: 自动生成群晖地址的插件文件  # Workflow名称
 
+# 触发条件：手动触发 + 每天凌晨2点自动触发
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 手动触发
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * *'  # 定时触发（UTC时间，对应北京时间10点）
 
+# 环境变量配置
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  PYTHONIOENCODING: utf-8
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 强制使用Node24
+  PYTHONIOENCODING: utf-8  # Python编码设置
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # 运行环境：Ubuntu最新版
     permissions:
-      contents: write
+      contents: write  # 授予写入代码库的权限（关键！）
+    
     steps:
+      # 步骤1：拉取main分支代码（包含所有历史）
       - name: 拉取main分支代码
         uses: actions/checkout@v4
         with:
           ref: main  # 只拉取main分支
-          fetch-depth: 0
-
-      - name: 配置Python
+          fetch-depth: 0  # 拉取所有历史（避免分支切换问题）
+      
+      # 步骤2：配置Python环境
+      - name: 配置Python环境
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-
-      - name: 安装依赖
+          python-version: '3.10'  # Python版本（兼容所有依赖）
+      
+      # 步骤3：安装Python依赖
+      - name: 安装依赖包
         run: |
-          pip install --upgrade pip
-          pip install loguru httpx ujson
-          pip list | grep -E "loguru|httpx|ujson"
-
-      - name: 生成插件文件（核心：生成带群晖地址的文件）
+          pip install --upgrade pip  # 升级pip
+          pip install loguru httpx ujson  # 安装脚本所需依赖
+          pip list | grep -E "loguru|httpx|ujson"  # 验证安装结果
+      
+      # 步骤4：生成插件文件（核心：在main分支生成，避免路径丢失）
+      - name: 生成带群晖地址的插件文件
         run: |
-          # 清空旧的dist目录（避免残留）
+          # 清空旧的dist目录（避免残留旧文件）
           rm -rf ./dist && mkdir -p ./dist
-          touch build.log
-          # 运行脚本生成带群晖地址的插件文件
+          touch build.log  # 创建日志文件
+          # 运行Python脚本生成插件文件，并记录日志
           python src/main.py 2>&1 | tee -a build.log
-          # 验证生成结果
+          # 验证文件生成结果
           echo "✅ 生成的plugins.json内容预览："
-          cat ./dist/plugins.json | head -20
+          cat ./dist/plugins.json | head -20  # 打印前20行
           echo "✅ 生成的JS文件列表："
-          ls -l ./dist/
-
-      - name: 推送生成的文件到dist分支（直接推送runner中的新文件）
+          ls -l ./dist/  # 列出生成的文件
+      
+      # 步骤5：推送生成的文件到dist分支（核心修复：直接操作文件系统）
+      - name: 推送文件到dist分支
         run: |
-          # 配置git用户
+          # 配置Git用户信息（必须，否则无法提交）
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 切换到dist分支（无则创建空分支）
+          # 检查dist分支是否存在，不存在则创建空分支
           if git rev-parse --verify dist >/dev/null 2>&1; then
+            # 分支存在：切换到dist分支
             git checkout dist
           else
+            # 分支不存在：创建空的orphan分支（无历史记录）
             git checkout --orphan dist
             git rm -rf .  # 清空初始内容
           fi
           
-          # 清空dist分支旧内容
+          # 清空dist分支所有旧内容（关键！避免旧README残留）
           rm -rf *
           # 复制runner中生成的新文件到dist分支根目录
           cp -r ./dist/* .
-          # 删除多余目录
+          # 删除多余的dist目录
           rm -rf ./dist
           
-          # 验证最终文件
+          # 验证最终要推送的文件
           echo "✅ 准备推送的文件列表："
           ls -l
           echo "✅ 最终plugins.json内容预览："
           cat plugins.json | head -20
           
-          # 提交并推送（强制覆盖）
+          # 提交并强制推送（覆盖旧内容）
           git add .
-          git commit -m "Auto update plugins with 7se.de5.net address $(date +'%Y-%m-%d %H:%M:%S')"
-          git push -f origin dist
+          # 无变更时不报错（避免空提交失败）
+          git commit -m "Auto update plugins with 7se.de5.net address $(date +'%Y-%m-%d %H:%M:%S')" || echo "文件无变更，无需提交"
+          git push -f origin dist  # 强制推送（覆盖dist分支）
           
-          # 切回main分支
+          # 切回main分支（避免后续操作异常）
           git checkout main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 上传日志
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 自动生成的Token，无需手动配置
+      
+      # 步骤6：上传日志（失败时排查用）
+      - name: 上传运行日志
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: build.log
-        if: always()
+          name: build-logs  # 日志文件名称
+          path: build.log  # 日志文件路径
+        if: always()  # 无论成功/失败都上传

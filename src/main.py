@@ -6,7 +6,7 @@ from httpx import AsyncClient  # 异步HTTP请求库
 import hashlib  # MD5哈希库（用于生成文件名）
 
 # ==================== 核心配置区（修改这里的群晖地址） ====================
-CDN_URL = "http://7se.de5.net:8888/music/"  
+CDN_URL = "http://7se.de5.net:8888/git/music/"  
 USE_CDN = True  
 VERSION = "0.2.0"  
 # ========================================================================

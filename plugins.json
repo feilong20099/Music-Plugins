@@ -1,0 +1,239 @@
+{
+  "desc": "0.2.0",
+  "plugins": [
+    {
+      "name": "Audiomack",
+      "url": "http://7se.de5.net:8888/git/music/763db2e9286a7826657fb2b88466cfc7.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/audiomack/index.js"
+    },
+    {
+      "name": "歌词网",
+      "url": "http://7se.de5.net:8888/git/music/b73a9bcf4c2e7a67a3992ac5a32f85f0.js",
+      "version": "0.0.0",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/geciwang/index.js"
+    },
+    {
+      "name": "歌词千寻",
+      "url": "http://7se.de5.net:8888/git/music/bae5886c27500fa32b28a17b9de8e4e9.js",
+      "version": "0.0.0",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/geciqianxun/index.js"
+    },
+    {
+      "name": "Navidrome",
+      "url": "http://7se.de5.net:8888/git/music/3fd3c3b115cc87de9ac3d96c2e3c9569.js",
+      "version": "0.0.0",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/navidrome/index.js"
+    },
+    {
+      "name": "suno",
+      "url": "http://7se.de5.net:8888/git/music/249ec9940f942034496ee3802e07d0a2.js",
+      "version": "0.0.0",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/suno/index.js"
+    },
+    {
+      "name": "udio",
+      "url": "http://7se.de5.net:8888/git/music/4ad17d90167dbf9cd0b6249e15c7f998.js",
+      "version": "0.0.0",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/udio/index.js"
+    },
+    {
+      "name": "猫耳FM",
+      "url": "http://7se.de5.net:8888/git/music/7735f9b122a825d66b5bc14d3f8a1632.js",
+      "version": "0.1.4",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/maoerfm/index.js"
+    },
+    {
+      "name": "快手",
+      "url": "http://7se.de5.net:8888/git/music/49f2e338273dc5d6701f6cb10aefee3f.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/kuaishou/index.js"
+    },
+    {
+      "name": "音悦台",
+      "url": "http://7se.de5.net:8888/git/music/29351dc376e3849dd8bf5b99e2e92666.js",
+      "version": "0.0.1",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/yinyuetai/index.js"
+    },
+    {
+      "name": "Youtube",
+      "url": "http://7se.de5.net:8888/git/music/4191604952f19f299cae00d867036179.js",
+      "version": "0.0.1",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/youtube/index.js"
+    },
+    {
+      "name": "bilibili",
+      "url": "http://7se.de5.net:8888/git/music/89bf408b5f71902e909307a561ee1315.js",
+      "version": "0.2.3",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/bilibili/index.js"
+    },
+    {
+      "name": "WebDAV",
+      "url": "http://7se.de5.net:8888/git/music/ef1bba0eb93a3ca633a8e15dda5ed543.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/maotoumao/MusicFreePlugins/raw/v0.1/dist/webdav/index.js"
+    },
+    {
+      "name": "网易",
+      "url": "http://7se.de5.net:8888/git/music/e4dbcaaef65756f54ba688886c6c6f5a.js",
+      "version": "1.1.1",
+      "original_url": "https://13413.kstore.vip/yuanli/wy.js"
+    },
+    {
+      "name": "酷我",
+      "url": "http://7se.de5.net:8888/git/music/066677f045b1808f61e68f11c52ebadf.js",
+      "version": "1.1.0",
+      "original_url": "https://13413.kstore.vip/yuanli/kw.js"
+    },
+    {
+      "name": "酷gou",
+      "url": "http://7se.de5.net:8888/git/music/264a51217354cb101564675db8725b74.js",
+      "version": "1.1.0",
+      "original_url": "https://13413.kstore.vip/yuanli/kg.js"
+    },
+    {
+      "name": "qq",
+      "url": "http://7se.de5.net:8888/git/music/2d993086321fede7c08ab0354f784c88.js",
+      "version": "1.1.1",
+      "original_url": "https://13413.kstore.vip/yuanli/qq.js"
+    },
+    {
+      "name": "mg",
+      "url": "http://7se.de5.net:8888/git/music/c0b2bef322b46e497065c3935c84566a.js",
+      "version": "1.1.0",
+      "original_url": "https://13413.kstore.vip/yuanli/xiaomi.js"
+    },
+    {
+      "name": "歌曲宝",
+      "url": "http://7se.de5.net:8888/git/music/8f4c3a2a223895b7eccce7b549f881e3.js",
+      "version": "0.0.6",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/gequbao.js"
+    },
+    {
+      "name": "书音FM",
+      "url": "http://7se.de5.net:8888/git/music/a2c44d99dd3ff1de07f76259d6ef1858.js",
+      "version": "0.3.6",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/shuyinfm.js"
+    },
+    {
+      "name": "六月听书",
+      "url": "http://7se.de5.net:8888/git/music/93a11730408bf308606ddabeaa1fe941.js",
+      "version": "0.1.5",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/6yueting.js"
+    },
+    {
+      "name": "果核音乐",
+      "url": "http://7se.de5.net:8888/git/music/2fcd93af3525f48024a01be210dd5ab4.js",
+      "version": "0.0.1",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/ghyinyue.js"
+    },
+    {
+      "name": "5sing",
+      "url": "http://7se.de5.net:8888/git/music/b25a34b4e76d85de88f82a2f041288a0.js",
+      "version": "0.0.3",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/5sing.js"
+    },
+    {
+      "name": "好听轻音乐",
+      "url": "http://7se.de5.net:8888/git/music/56324c9a116e4c81d0ce6500a3da19d9.js",
+      "version": "0.1.0",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/htqyy.js"
+    },
+    {
+      "name": "爱听",
+      "url": "http://7se.de5.net:8888/git/music/3768c96a4150e15b32eeba95a019d81f.js",
+      "version": "0.0.6",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/at.js"
+    },
+    {
+      "name": "种子",
+      "url": "http://7se.de5.net:8888/git/music/67b3ba6d067a31d9f12badb4a3d40154.js",
+      "version": "0.1.0",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/zz.js"
+    },
+    {
+      "name": "小秋音乐",
+      "url": "http://7se.de5.net:8888/git/music/cdf10b110435c7e5979906706a9480c0.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/xiaoqiu.js"
+    },
+    {
+      "name": "小枸音乐",
+      "url": "http://7se.de5.net:8888/git/music/6db569b10315dc6ad0a4db99643c250e.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/xiaogou.js"
+    },
+    {
+      "name": "小芸音乐",
+      "url": "http://7se.de5.net:8888/git/music/db53f4f10cbdb85d14b8bf490e3401f0.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/xiaoyun.js"
+    },
+    {
+      "name": "小蜜音乐",
+      "url": "http://7se.de5.net:8888/git/music/2a5dd624514f8f3f7897a8c1289a65de.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/xiaomi.js"
+    },
+    {
+      "name": "小蜗音乐",
+      "url": "http://7se.de5.net:8888/git/music/292415ca8fbabfa027fb0b55bf43fd05.js",
+      "version": "0.0.2",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/xiaowo.js"
+    },
+    {
+      "name": "网易云电台",
+      "url": "http://7se.de5.net:8888/git/music/c4498b02ec7cc3010028e76aa8cf9292.js",
+      "version": "0.0.2",
+      "original_url": "https://fastly.jsdelivr.net/gh/GuGuMur/MusicFreePlugin-NeteaseRadio@master/dist/plugin.js"
+    },
+    {
+      "name": "酷狗",
+      "url": "http://7se.de5.net:8888/git/music/822850e4e73aaa990079c59b48387084.js",
+      "version": "0.1.4",
+      "original_url": "https://gitee.com/kevinr/tvbox/raw/master/musicfree/plugins/kugou.js"
+    },
+    {
+      "name": "网易",
+      "url": "http://7se.de5.net:8888/git/music/4181e157ded6392673693a55ddce6009.js",
+      "version": "0.1.0",
+      "original_url": "http://music.haitangw.net/cqapi/wy.js"
+    },
+    {
+      "name": "酷我",
+      "url": "http://7se.de5.net:8888/git/music/cb2877f031656f07d582eb4b62dc5db0.js",
+      "version": "0.1.0",
+      "original_url": "http://music.haitangw.net/cqapi/kw.js"
+    },
+    {
+      "name": "酷我",
+      "url": "http://7se.de5.net:8888/git/music/2d67f88f71ca165c29cb8994efe3c262.js",
+      "version": "0.1.0",
+      "original_url": "http://music.haitangw.net/cqapi/kg.js"
+    },
+    {
+      "name": "qq",
+      "url": "http://7se.de5.net:8888/git/music/a651c7b10e4d7cbe61ffcbaff8a65cab.js",
+      "version": "0.1.0",
+      "original_url": "http://music.haitangw.net/cqapi/qq.js"
+    },
+    {
+      "name": "mg",
+      "url": "http://7se.de5.net:8888/git/music/1cd259d39f9e52afc03913f475776bfe.js",
+      "version": "0.1.0",
+      "original_url": "http://music.haitangw.net/cqapi/xiaomi.js"
+    },
+    {
+      "name": "汽水音乐",
+      "url": "http://7se.de5.net:8888/git/music/a835a0ba3fb748cd672a56daaa0cad9a.js",
+      "version": "0.1.5",
+      "original_url": "https://gitee.com/hongmengv5/musicfree/raw/master/qishui.js"
+    },
+    {
+      "name": "W电台",
+      "url": "http://7se.de5.net:8888/git/music/a408aa98e2c0e126a79a1a3c572ac894.js",
+      "version": "0.0.2",
+      "original_url": "https://cdn.jsdelivr.net/gh/GuGuMur/MusicFreePlugin-NeteaseRadio@master/dist/plugin.js"
+    }
+  ]
+}
